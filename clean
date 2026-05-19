@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+if [[ $# -eq 0 ]]
+then
+        echo "ERROR: No input CSV file provided" >&2
+        exit 1
+fi
+
+if [[ $# -ne 1 ]]
+then
+        echo "ERROR: Too many arguments provided, Only one argument is expected" >&2
+        exit 1
+fi
+
+input=$1
+
+if [[ ! -f "$input" ]]
+then
+        echo "ERROR: Input file not found in the current directory" >&2
+        exit 1
+fi
+
+if [[ "$input" != *.csv ]]
+then
+        echo "ERROR: Input file expected in a CSV format" >&2
+        exit 1
+fi
+
+if [[ ! -s "$input" ]]
+then
+        echo "ERROR: Empty file provided" >&2
+        exit 1
+fi
+
+number_of_columns=$(head -n 1 "$input" | tr ',' '\n' | wc -l)
+if [[ "$number_of_columns" -ne 7 ]]
+then
+        echo "ERROR: Expected 7 columns in the header" >&2
+        exit 1
+fi
