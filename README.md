@@ -57,7 +57,7 @@ becomes:
 2009-09-18
 ```
 
-### Usage
+### How to run this script:
 
 ```bash
 ./clean trending_videos_unclean.csv
