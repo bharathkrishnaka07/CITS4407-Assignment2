@@ -1,40 +1,103 @@
 #!/usr/bin/env bash
 
-if [[ $# -eq 0 ]]
-then
-        echo "ERROR: No input CSV file provided" >&2
-        exit 1
-fi
+# Name: BHARATH KRISHNA
+# ID: 25182359
+# Date of completion: 20 May 2026
 
+# How to run this script: ./clean trending_videos_unclean.csv
+
+# Summary:
+# Performs error-checking and data-cleaning operations on the provided CSV file.
+
+# Checks whether an input file was provided
 if [[ $# -ne 1 ]]
 then
-        echo "ERROR: Too many arguments provided, Only one argument is expected" >&2
-        exit 1
+    echo "ERROR: No input CSV file provided"
+    exit 1
 fi
 
-input=$1
+input_file=$1
+output_file="trending_videos_clean.csv"
 
-if [[ ! -f "$input" ]]
+# Check whether an input file was provided
+if [[ ! -f "$input_file" ]]
 then
-        echo "ERROR: Input file not found in the current directory" >&2
-        exit 1
+    echo "ERROR: Input file not found in the current directory"
+    exit 1
 fi
 
-if [[ "$input" != *.csv ]]
+# Check whether the input file is a CSV file
+if [[ "$input_file" != *.csv ]]
 then
-        echo "ERROR: Input file expected in a CSV format" >&2
-        exit 1
+    echo "ERROR: Input file expected in a CSV format"
+    exit 1
 fi
 
-if [[ ! -s "$input" ]]
+# Check whether the input file is empty
+if [[ ! -s "$input_file" ]]
 then
-        echo "ERROR: Empty file provided" >&2
-        exit 1
+    echo "ERROR: Empty file provided"
+    exit 1
 fi
 
-number_of_columns=$(head -n 1 "$input" | tr ',' '\n' | wc -l)
-if [[ "$number_of_columns" -ne 7 ]]
+# Check whether the header contains exactly 7 fields
+header_fields=$(head -n 1 "$input_file" | awk -F',' '{print NF}')
+if [[ "$header_fields" -ne 7 ]]
 then
-        echo "ERROR: Expected 7 columns in the header" >&2
-        exit 1
+    echo "ERROR: Expected 7 columns in the header"
+    exit 1
 fi
+
+# Perform data cleaning operations
+
+# 1. Remove ratings_disabled column from header
+head -n 1 "$input_file" | cut -d',' -f1-6 > "$output_file"
+
+# 2. Remove time data from publish_date and remove ratings_disabled column
+tail -n +2 "$input_file" | sed 's/T.*Z//' | cut -d',' -f1-6 |
+
+awk -F',' '
+
+BEGIN {
+    OFS=","
+}
+
+# 3. Skip rows that do not contain the same number of fields as the header
+{
+    if(NF != 6)
+    {
+        next
+    }
+}
+
+# 4. Skip rows containing empty fields
+{
+    for(i = 1; i <= NF; i++)
+    {
+        if($i == "")
+        {
+            next
+        }
+    }
+}
+
+# 5. Skip duplicate rows
+{
+    if(count[$0] > 0)
+    {
+        next
+    }
+
+    count[$0] = 1
+}
+
+# 6. Skip rows with zero likes or dislikes
+{
+    if($4 == 0 || $5 == 0)
+    {
+        next
+    }
+}
+
+# Write cleaned data rows to the output file
+{print}' >> "$output_file"
