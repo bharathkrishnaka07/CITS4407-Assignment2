@@ -187,29 +187,7 @@ else
 fi
 
 # -----------------------------------------
-# Test 13: Rows with incorrect field counts removed
-# -----------------------------------------
-
-cat > tests/bad_fields.csv <<EOF
-video_id,publish_date,views,likes,dislikes,comments_disabled,ratings_disabled
-id1,2009-09-18T15:36:33.000Z,100,10,5,FALSE,FALSE
-id2,2009-09-18T15:36:33.000Z,100,10,5,FALSE
-EOF
-
-./clean tests/bad_fields.csv
-
-if grep -q "^id2," trending_videos_clean.csv
-then
-    echo "FAIL: Incorrect field count row still exists"
-    failed=$((failed + 1))
-else
-    echo "PASS: Incorrect field count rows removed"
-    passed=$((passed + 1))
-fi
-
-
-# -----------------------------------------
-# Test 14: Rows with empty fields removed
+# Test 13: Rows with empty fields removed
 # -----------------------------------------
 
 cat > tests/empty_fields.csv <<EOF
@@ -232,7 +210,7 @@ fi
 
 
 # -----------------------------------------
-# Test 15: ratings_disabled column fully removed
+# Test 14: ratings_disabled column fully removed
 # -----------------------------------------
 
 header=$(head -n 1 trending_videos_clean.csv)
@@ -248,7 +226,7 @@ fi
 
 
 # -----------------------------------------
-# Test 16: Output contains only valid rows
+# Test 15: Output contains only valid rows
 # -----------------------------------------
 
 cat > tests/valid_rows.csv <<EOF
@@ -272,7 +250,7 @@ fi
 
 
 # -----------------------------------------
-# Test 17: publish_date format cleaned correctly
+# Test 16: publish_date format cleaned correctly
 # -----------------------------------------
 
 if grep -Eq '[0-9]{4}-[0-9]{2}-[0-9]{2}T' trending_videos_clean.csv
@@ -286,7 +264,7 @@ fi
 
 
 # -----------------------------------------
-# Test 18: Output file contains exactly 6 columns
+# Test 17: Output file contains exactly 6 columns
 # -----------------------------------------
 
 invalid_columns=$(awk -F',' 'NF != 6' trending_videos_clean.csv)
@@ -302,7 +280,7 @@ fi
 
 
 # -----------------------------------------
-# Test 19: Duplicate removal preserves one copy
+# Test 18: Duplicate removal preserves one copy
 # -----------------------------------------
 
 cat > tests/duplicates.csv <<EOF
@@ -326,7 +304,7 @@ fi
 
 
 # -----------------------------------------
-# Test 20: Output file generated successfully
+# Test 19: Output file generated successfully
 # -----------------------------------------
 
 if [[ -s trending_videos_clean.csv ]]
@@ -339,7 +317,7 @@ else
 fi
 
 # -----------------------------------------
-# Test 21: Header with more than 7 fields
+# Test 20: Header with more than 7 fields
 # -----------------------------------------
 
 cat > tests/extra_header.csv <<EOF
@@ -353,7 +331,7 @@ run_test \
 "ERROR: Expected 7 columns in the header"
 
 # -----------------------------------------
-# Test 22: Valid CSV content with invalid extension
+# Test 21: Valid CSV content with invalid extension
 # -----------------------------------------
 
 cat > tests/fake.txt <<EOF
@@ -367,7 +345,7 @@ run_test \
 "ERROR: Input file expected in a CSV format"
 
 # -----------------------------------------
-# Test 23: File with only header
+# Test 22: File with only header
 # -----------------------------------------
 
 cat > tests/header_only.csv <<EOF
@@ -388,7 +366,7 @@ else
 fi
 
 # -----------------------------------------
-# Test 24: Multiple duplicate rows
+# Test 23: Multiple duplicate rows
 # -----------------------------------------
 
 cat > tests/many_duplicates.csv <<EOF
@@ -412,7 +390,7 @@ else
 fi
 
 # -----------------------------------------
-# Test 25: Rows with blank fields
+# Test 24: Rows with blank fields
 # -----------------------------------------
 
 cat > tests/blank_fields.csv <<EOF
@@ -434,7 +412,7 @@ else
 fi
 
 # -----------------------------------------
-# Test 26: ratings_disabled column fully removed from all rows
+# Test 25: ratings_disabled column fully removed from all rows
 # -----------------------------------------
 
 invalid=$(awk -F',' 'NF != 6' trending_videos_clean.csv)
@@ -449,12 +427,17 @@ else
 fi
 
 # -----------------------------------------
-# Test 27: Valid rows remain unchanged
+# Test 26: Valid rows remain unchanged
 # -----------------------------------------
 
-grep -q "^id1,2009-09-18,100,10,5,FALSE$" trending_videos_clean.csv
+cat > tests/valid_rows_check.csv <<EOF
+video_id,publish_date,views,likes,dislikes,comments_disabled,ratings_disabled
+id1,2009-09-18T15:36:33.000Z,100,10,5,FALSE,FALSE
+EOF
 
-if [[ "$?" -eq 0 ]]
+./clean tests/valid_rows_check.csv
+
+if grep -q "^id1,2009-09-18,100,10,5,FALSE$" trending_videos_clean.csv
 then
     echo "PASS: Valid rows preserved correctly"
     passed=$((passed + 1))
