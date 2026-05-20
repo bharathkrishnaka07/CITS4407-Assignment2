@@ -339,6 +339,131 @@ else
 fi
 
 # -----------------------------------------
+# Test 21: Header with more than 7 fields
+# -----------------------------------------
+
+cat > tests/extra_header.csv <<EOF
+a,b,c,d,e,f,g,h
+1,2,3,4,5,6,7,8
+EOF
+
+run_test \
+"Header with extra fields" \
+"./clean tests/extra_header.csv" \
+"ERROR: Expected 7 columns in the header"
+
+# -----------------------------------------
+# Test 22: Valid CSV content with invalid extension
+# -----------------------------------------
+
+cat > tests/fake.txt <<EOF
+a,b,c,d,e,f,g
+1,2,3,4,5,6,7
+EOF
+
+run_test \
+"CSV content but invalid extension" \
+"./clean tests/fake.txt" \
+"ERROR: Input file expected in a CSV format"
+
+# -----------------------------------------
+# Test 23: File with only header
+# -----------------------------------------
+
+cat > tests/header_only.csv <<EOF
+video_id,publish_date,views,likes,dislikes,comments_disabled,ratings_disabled
+EOF
+
+./clean tests/header_only.csv
+
+rows=$(wc -l < trending_videos_clean.csv)
+
+if [[ "$rows" -eq 1 ]]
+then
+    echo "PASS: Header-only file handled correctly"
+    passed=$((passed + 1))
+else
+    echo "FAIL: Header-only file incorrect"
+    failed=$((failed + 1))
+fi
+
+# -----------------------------------------
+# Test 24: Multiple duplicate rows
+# -----------------------------------------
+
+cat > tests/many_duplicates.csv <<EOF
+video_id,publish_date,views,likes,dislikes,comments_disabled,ratings_disabled
+id1,2009-09-18T15:36:33.000Z,100,10,5,FALSE,FALSE
+id1,2009-09-18T15:36:33.000Z,100,10,5,FALSE,FALSE
+id1,2009-09-18T15:36:33.000Z,100,10,5,FALSE,FALSE
+EOF
+
+./clean tests/many_duplicates.csv
+
+rows=$(tail -n +2 trending_videos_clean.csv | wc -l)
+
+if [[ "$rows" -eq 1 ]]
+then
+    echo "PASS: Multiple duplicates removed correctly"
+    passed=$((passed + 1))
+else
+    echo "FAIL: Multiple duplicates not removed"
+    failed=$((failed + 1))
+fi
+
+# -----------------------------------------
+# Test 25: Rows with blank fields
+# -----------------------------------------
+
+cat > tests/blank_fields.csv <<EOF
+video_id,publish_date,views,likes,dislikes,comments_disabled,ratings_disabled
+id1,,100,10,5,FALSE,FALSE
+EOF
+
+./clean tests/blank_fields.csv
+
+rows=$(tail -n +2 trending_videos_clean.csv | wc -l)
+
+if [[ "$rows" -eq 0 ]]
+then
+    echo "PASS: Blank field rows removed"
+    passed=$((passed + 1))
+else
+    echo "FAIL: Blank field rows still exist"
+    failed=$((failed + 1))
+fi
+
+# -----------------------------------------
+# Test 26: ratings_disabled column fully removed from all rows
+# -----------------------------------------
+
+invalid=$(awk -F',' 'NF != 6' trending_videos_clean.csv)
+
+if [[ -n "$invalid" ]]
+then
+    echo "FAIL: Some rows still contain incorrect columns"
+    failed=$((failed + 1))
+else
+    echo "PASS: All rows contain exactly 6 columns"
+    passed=$((passed + 1))
+fi
+
+# -----------------------------------------
+# Test 27: Valid rows remain unchanged
+# -----------------------------------------
+
+grep -q "^id1,2009-09-18,100,10,5,FALSE$" trending_videos_clean.csv
+
+if [[ "$?" -eq 0 ]]
+then
+    echo "PASS: Valid rows preserved correctly"
+    passed=$((passed + 1))
+else
+    echo "FAIL: Valid rows modified incorrectly"
+    failed=$((failed + 1))
+fi
+
+# -----------------------------------------
 # Final Results
 # -----------------------------------------
 
