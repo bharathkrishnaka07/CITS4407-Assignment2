@@ -20,7 +20,7 @@ input_file=$1
 output_file="trending_videos_clean.csv"
 
 # Check whether the input file exists
-if [[ ! -f "$input_file" ]]
+if [[ ! -f "$input_file" || ! -r "$input_file" ]]
 then
     echo "ERROR: Input file not found in the current directory"
     exit 1

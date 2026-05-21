@@ -19,7 +19,7 @@ fi
 input_file=$1
 
 # Check whether the input file exists
-if [[ ! -f "$input_file" ]]
+if [[ ! -f "$input_file" || ! -r "$input_file" ]]
 then
     echo "ERROR: Input file not found in the current directory"
     exit 1
@@ -61,6 +61,7 @@ BEGIN {
 
     max_frequency = 0
     total_views = 0
+    total_rows = 0
     max_dislikes = 0
     max_engagement = 0
     min_sentiment = 1
@@ -68,7 +69,7 @@ BEGIN {
 
 NR > 1 {
 
-   # Skip rows with invalid views, likes or dislikes
+    # Skip rows with invalid views, likes or dislikes
     if ($3 <= 0 || $4 <= 0 || $5 <= 0)
         next
 
@@ -85,6 +86,7 @@ NR > 1 {
 
     # 2. Calculate the total number of views
     total_views += $3
+    total_rows++
 
     # 3. Find the video with the maximum number of dislikes
     if ($5 > max_dislikes)
@@ -122,8 +124,8 @@ NR > 1 {
 END {
 
     # Calculate mean number of views
-    if (NR - 1 > 0)
-        mean_views = total_views / (NR - 1)
+    if (total_rows > 0)
+        mean_views = total_views / total_rows
     else
         mean_views = 0
 
