@@ -145,7 +145,7 @@ Added automated test scripts and GitHub Actions workflow files:
 - `tests/test_analyse`
 - `.github/workflows/`
 
-The automated tests validate error handling, CSV/header validation, edge cases, tie cases, output formatting, and performance testing for both scripts.
+The automated tests validate error handling, CSV/header validation, edge cases, tie cases, output formatting and performance testing for both scripts.
 
 ## Submission Contents
 
