@@ -345,25 +345,17 @@ run_test \
 "ERROR: Input file expected in a CSV format"
 
 # -----------------------------------------
-# Test 22: File with only header
+# Test 22: File with only header (no data rows)
 # -----------------------------------------
 
 cat > tests/header_only.csv <<EOF
 video_id,publish_date,views,likes,dislikes,comments_disabled,ratings_disabled
 EOF
 
-./clean tests/header_only.csv
-
-rows=$(wc -l < trending_videos_clean.csv)
-
-if [[ "$rows" -eq 1 ]]
-then
-    echo "PASS: Header-only file handled correctly"
-    passed=$((passed + 1))
-else
-    echo "FAIL: Header-only file incorrect"
-    failed=$((failed + 1))
-fi
+run_test \
+"Header-only file (no data rows)" \
+"./clean tests/header_only.csv" \
+"ERROR: No data rows found in the input file"
 
 # -----------------------------------------
 # Test 23: Multiple duplicate rows
