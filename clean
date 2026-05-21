@@ -64,39 +64,29 @@ BEGIN {
 
 # 3. Skip rows that do not contain the same number of fields as the header
 {
-    if(NF != 6)
-    {
+    if (NF != 6)
         next
-    }
 }
 
 # 4. Skip rows containing empty fields
 {
-    for(i = 1; i <= NF; i++)
-    {
-        if($i == "")
-        {
+    for (i = 1; i <= NF; i++)
+        if ($i == "")
             next
-        }
-    }
 }
 
 # 5. Skip duplicate rows
 {
-    if(count[$0] > 0)
-    {
+    if ($0 in count)
         next
-    }
-
-    count[$0] = 1
+    else
+        count[$0] = 1
 }
 
 # 6. Skip rows with zero likes or dislikes
 {
-    if($4 == 0 || $5 == 0)
-    {
+    if ($4 == 0 || $5 == 0)
         next
-    }
 }
 
 # Write cleaned data rows to the output file
