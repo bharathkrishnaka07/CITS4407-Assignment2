@@ -4,7 +4,7 @@
 # ID: 25182359
 # Date of completion:
 
-# How to run this script: ./analyse trending_videos_clean.csv
+# How to run this script: ./analyse trending_videos_clean.csv 
 
 # Summary:
 # Performs data analysis operations on the provided CSV file.
@@ -16,17 +16,17 @@ then
     exit 1
 fi
 
-file=$1
+input_file=$1
 
 # Check whether the input file is a CSV file
-if [[ "$file" != *.csv ]]
+if [[ "$input_file" != *.csv ]]
 then
     echo "ERROR: Input file expected in a CSV format"
     exit 1
 fi
 
-# Check if the file exists, is readable and is not empty
-if [[ ! -f "$file" || ! -r "$file" || ! -s "$file" ]]
+# Check if the input file exists, is readable and is not empty
+if [[ ! -f "$input_file" || ! -r "$file" || ! -s "$file" ]]
 then
         echo "ERROR: The specified input file $file does not exist, is not readable or is empty"
         exit 1
