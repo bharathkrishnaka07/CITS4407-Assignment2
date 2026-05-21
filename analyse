@@ -2,21 +2,28 @@
 
 # Name: BHARATH KRISHNA
 # ID: 25182359
-# Date of completion:
+# Date of completion: 21 May 2026
 
-# How to run this script: ./analyse trending_videos_clean.csv 
+# How to run this script: ./analyse trending_videos_clean.csv
 
 # Summary:
-# Performs data analysis operations on the provided CSV file.
+# Performs data analysis operations on the provided cleaned CSV file.
 
-# Check if exactly one argument is passed
+# Checks whether an input file was provided
 if [[ $# -ne 1 ]]
 then
-    echo "ERROR: $0 expects exactly one argument"
+    echo "ERROR: No input CSV file provided"
     exit 1
 fi
 
 input_file=$1
+
+# Check whether the input file exists
+if [[ ! -f "$input_file" ]]
+then
+    echo "ERROR: Input file not found in the current directory"
+    exit 1
+fi
 
 # Check whether the input file is a CSV file
 if [[ "$input_file" != *.csv ]]
@@ -25,9 +32,190 @@ then
     exit 1
 fi
 
-# Check if the input file exists, is readable and is not empty
-if [[ ! -f "$input_file" || ! -r "$file" || ! -s "$file" ]]
+# Check whether the input file is empty
+if [[ ! -s "$input_file" ]]
 then
-        echo "ERROR: The specified input file $file does not exist, is not readable or is empty"
-        exit 1
+    echo "ERROR: Empty file provided"
+    exit 1
 fi
+
+# Check whether the header contains exactly 6 fields
+header_fields=$(head -n 1 "$input_file" | awk -F',' '{print NF}')
+if [[ "$header_fields" -ne 6 ]]
+then
+    echo "ERROR: Expected 6 columns in the header"
+    exit 1
+fi
+
+# Check whether the input file contains any data rows
+if [[ $(wc -l < "$input_file") -le 1 ]]
+then
+    echo "ERROR: No data rows found in the input file"
+    exit 1
+fi
+
+awk -F',' '
+
+BEGIN {
+    OFS=","
+
+    max_frequency = 0
+    total_views = 0
+    max_dislikes = 0
+    max_engagement = 0
+    min_sentiment = 1
+}
+
+NR > 1 {
+
+   # Skip rows with invalid views, likes or dislikes
+    if ($3 <= 0 || $4 <= 0 || $5 <= 0)
+        next
+
+    # 1. Calculate the most frequent video
+    frequency[$1]++
+    if (frequency[$1] > max_frequency)
+    {
+        max_frequency = frequency[$1]
+        delete most_frequent_videos
+        most_frequent_videos[$1] = 1
+    }
+    else if (frequency[$1] == max_frequency)
+        most_frequent_videos[$1] = 1
+
+    # 2. Calculate the total number of views
+    total_views += $3
+
+    # 3. Find the video with the maximum number of dislikes
+    if ($5 > max_dislikes)
+    {
+        max_dislikes = $5
+        delete max_dislikes_videos
+        max_dislikes_videos[$1] = 1
+    }
+    else if ($5 == max_dislikes)
+        max_dislikes_videos[$1] = 1
+
+    # 4. Calculate the highest engagement rate
+    engagement_rate = ($4 + $5) / $3
+    if (engagement_rate > max_engagement)
+    {
+        max_engagement = engagement_rate
+        delete highest_engagement_videos
+        highest_engagement_videos[$1 "," $2] = 1
+    }
+    else if (engagement_rate == max_engagement)
+        highest_engagement_videos[$1 "," $2] = 1
+
+    # 5. Calculate the least net sentiment rate
+    sentiment_rate = ($4 - $5) / $3
+    if (sentiment_rate < min_sentiment)
+    {
+        min_sentiment = sentiment_rate
+        delete least_sentiment_videos
+        least_sentiment_videos[$1 "," $2] = 1
+    }
+    else if (sentiment_rate == min_sentiment)
+        least_sentiment_videos[$1 "," $2] = 1
+}
+
+END {
+
+    # Calculate mean number of views
+    if (NR - 1 > 0)
+        mean_views = total_views / (NR - 1)
+    else
+        mean_views = 0
+
+    # Print most frequent video
+    printf "Most frequent video, ID: "
+
+    first = 1
+    for (video in most_frequent_videos)
+    {
+        if (!first)
+            printf ", "
+
+        printf "%s", video
+        first = 0
+    }
+
+    printf "\n"
+
+    # Print mean number of views
+    printf "Mean number of views: %.2f\n", mean_views
+
+    # Print maximum dislikes video_id
+    printf "Max dislikes video, ID: "
+
+    first = 1
+    for (video in max_dislikes_videos)
+    {
+        if (!first)
+            printf ", "
+
+        printf "%s", video
+        first = 0
+    }
+
+    printf "\n"
+
+    # Print highest engagement rate video
+    printf "Highest engagement rate video, ID: "
+
+    first = 1
+    for (video in highest_engagement_videos)
+    {
+        split(video, data, ",")
+        if (!first)
+            printf ", "
+
+        printf "%s", data[1]
+        first = 0
+    }
+
+    printf ", dated: "
+
+    first = 1
+    for (video in highest_engagement_videos)
+    {
+        split(video, data, ",")
+        if (!first)
+            printf ", "
+
+        printf "%s", data[2]
+        first = 0
+    }
+
+    printf "\n"
+
+    # Print least net sentiment rate video
+    printf "Least sentiment rate video, ID: "
+
+    first = 1
+    for (video in least_sentiment_videos)
+    {
+        split(video, data, ",")
+        if (!first)
+            printf ", "
+
+        printf "%s", data[1]
+        first = 0
+    }
+
+    printf ", dated: "
+
+    first = 1
+    for (video in least_sentiment_videos)
+    {
+        split(video, data, ",")
+        if (!first)
+            printf ", "
+
+        printf "%s", data[2]
+        first = 0
+    }
+
+    printf "\n"
+
+}' "$input_file"
