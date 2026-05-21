@@ -1,19 +1,28 @@
-name: Test Clean Script
+name: Tests
 
 on:
   push:
   pull_request:
 
 jobs:
-  test-clean-script:
+  test-clean:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Make clean script executable
-        run: chmod u+x clean
+      - name: Make scripts executable
+        run: chmod u+x clean analyse tests/test_clean tests/test_analyse
 
-      - name: Run automated tests
+      - name: Run tests clean
         run: bash tests/test_clean
+
+  test-analyse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: chmod u+x clean analyse tests/test_clean tests/test_analyse
+
+      - name: Run tests analyse
+        run: bash tests/test_analyse

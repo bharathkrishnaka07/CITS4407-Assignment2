@@ -19,7 +19,7 @@ fi
 input_file=$1
 output_file="trending_videos_clean.csv"
 
-# Check whether an input file was provided
+# Check whether the input file exists
 if [[ ! -f "$input_file" ]]
 then
     echo "ERROR: Input file not found in the current directory"
@@ -45,6 +45,13 @@ header_fields=$(head -n 1 "$input_file" | awk -F',' '{print NF}')
 if [[ "$header_fields" -ne 7 ]]
 then
     echo "ERROR: Expected 7 columns in the header"
+    exit 1
+fi
+
+# Check whether the input file contains any data rows
+if [[ $(wc -l < "$input_file") -le 1 ]]
+then
+    echo "ERROR: No data rows found in the input file"
     exit 1
 fi
 
@@ -83,9 +90,9 @@ BEGIN {
         count[$0] = 1
 }
 
-# 6. Skip rows with zero likes or dislikes
+# 6. Skip rows with negative views or zero/negative likes or dislikes
 {
-    if ($4 == 0 || $5 == 0)
+    if ($3 < 0 || $4 <= 0 || $5 <= 0)
         next
 }
 

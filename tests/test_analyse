@@ -1,0 +1,321 @@
+#!/usr/bin/env bash
+
+cd "$(dirname "$0")/.." || exit 1
+
+HEADER="video_id,publish_date,views,likes,dislikes,comments_disabled"
+
+rm -rf tests/tmp_analyse
+mkdir -p tests/tmp_analyse
+trap 'rm -rf tests/tmp_analyse' EXIT
+
+passed=0
+failed=0
+
+pass() {
+    echo "PASS: $1"
+    passed=$((passed + 1))
+}
+
+fail() {
+    echo "FAIL: $1"
+    [[ -n "${2:-}" ]] && echo "       $2"
+    failed=$((failed + 1))
+}
+run_expect_error() {
+    local name="$1"
+    local needle="$2"
+    shift 2
+    local out
+    local code
+
+    out=$(./analyse "$@" 2>&1)
+    code=$?
+
+    if [[ "$code" -eq 0 ]]; then
+        fail "$name" "Expected non-zero exit; output=$out"
+        return
+    fi
+
+    if [[ "$out" == *"$needle"* ]]; then
+        pass "$name"
+    else
+        fail "$name" "Expected '$needle', exit=$code, output=$out"
+    fi
+}
+
+run_expect_success() {
+    local path="$1"
+    local out
+    local code
+
+    out=$(./analyse "$path" 2>&1)
+    code=$?
+
+    if [[ "$code" -eq 0 ]]; then
+        echo "$out"
+        return 0
+    fi
+    echo ""
+    fail "analyse failed on $path" "$out"
+    return 1
+}
+
+assert_exact_line_count() {
+    local name="$1"
+    local text="$2"
+    local want="$3"
+    local got
+
+    got=$(printf '%s\n' "$text" | wc -l | tr -d ' ')
+    if [[ "$got" -eq "$want" ]]; then
+        pass "$name"
+    else
+        fail "$name" "want $want lines, got $got"
+    fi
+}
+
+assert_prefix_lines() {
+    local text="$1"
+    echo "$text" | grep -q '^Most frequent video, ID: ' || {
+        fail "Output line 1 prefix"; return 1
+    }
+    echo "$text" | grep -q '^Mean number of views: ' || {
+        fail "Output line 2 prefix"; return 1
+    }
+    echo "$text" | grep -q '^Max dislikes video, ID: ' || {
+        fail "Output line 3 prefix"; return 1
+    }
+    echo "$text" | grep -q '^Highest engagement rate video, ID: ' || {
+        fail "Output line 4 prefix"; return 1
+    }
+    echo "$text" | grep -q '^Least sentiment rate video, ID: ' || {
+        fail "Output line 5 prefix"; return 1
+    }
+    pass "All five output lines have correct prefixes"
+}
+
+assert_mean_decimal() {
+    local text="$1"
+    local line
+
+    line=$(echo "$text" | sed -n '/^Mean number of views:/p' | head -1)
+    if [[ "$line" =~ ^Mean\ number\ of\ views:\ [0-9]+\.[0-9]{2}$ ]]; then
+        pass "Mean formatted with exactly two decimal places"
+    else
+        fail "Mean decimal format" "Got: $line"
+    fi
+}
+
+chmod +x analyse
+
+echo "Running analyse automated tests..."
+echo ""
+
+# ---------- Error handling (mirror clean-style checks in analyse script) ----------
+touch tests/tmp_analyse/notcsv.txt
+
+run_expect_error "No arguments" \
+    "ERROR: No input CSV file provided"
+
+cat > tests/tmp_analyse/two_arg.csv <<EOF
+$HEADER
+only,2020-01-01,1,1,1,False
+EOF
+
+run_expect_error "Too many arguments" \
+    "ERROR: No input CSV file provided" \
+    tests/tmp_analyse/two_arg.csv extra_argument
+
+run_expect_error "Missing file" \
+    "ERROR: Input file not found in the current directory" \
+    tests/tmp_analyse/nonexistent.csv
+
+run_expect_error "Not .csv extension" \
+    "ERROR: Input file expected in a CSV format" \
+    tests/tmp_analyse/notcsv.txt
+
+touch tests/tmp_analyse/empty.csv
+run_expect_error "Empty file" \
+    "ERROR: Empty file provided" \
+    tests/tmp_analyse/empty.csv
+
+cat > tests/tmp_analyse/bad_header5.csv <<EOF
+a,b,c,d,e
+1,2,3,4,5
+EOF
+run_expect_error "Header has 5 columns" \
+    "ERROR: Expected 6 columns in the header" \
+    tests/tmp_analyse/bad_header5.csv
+
+cat > tests/tmp_analyse/bad_header7.csv <<EOF
+a,b,c,d,e,f,g
+1,2,3,4,5,6,7
+EOF
+run_expect_error "Header has 7 columns" \
+    "ERROR: Expected 6 columns in the header" \
+    tests/tmp_analyse/bad_header7.csv
+
+# Header only → NR-1 == 0 → division by zero in awk END block (implementation edge case)
+cat > tests/tmp_analyse/header_only.csv <<EOF
+$HEADER
+EOF
+out=$(./analyse tests/tmp_analyse/header_only.csv 2>&1)
+code=$?
+if [[ "$code" -ne 0 ]]; then
+    pass "Header-only input rejected or awk fails (no data rows)"
+else
+    fail "Header-only input" "Expected non-zero exit; output: $out"
+fi
+
+# ---------- Minimal deterministic dataset ----------
+cat > tests/tmp_analyse/one_row.csv <<EOF
+$HEADER
+idZ,2021-06-15,50,25,5,False
+EOF
+
+out=$(run_expect_success tests/tmp_analyse/one_row.csv) || true
+if [[ -n "$out" ]]; then
+    assert_exact_line_count "Single-row output line count" "$out" 5
+    assert_prefix_lines "$out"
+    assert_mean_decimal "$out"
+    echo "$out" | grep -Fxq "Most frequent video, ID: idZ" && pass "Most frequent ID idZ" || fail "Most frequent ID idZ"
+    echo "$out" | grep -Fxq "Mean number of views: 50.00" && pass "Mean views 50.00" || fail "Mean views 50.00"
+    echo "$out" | grep -Fxq "Max dislikes video, ID: idZ" && pass "Max dislikes idZ" || fail "Max dislikes idZ"
+    echo "$out" | grep -Fxq "Highest engagement rate video, ID: idZ, dated: 2021-06-15" && pass "Engagement row" || fail "Engagement row"
+    echo "$out" | grep -Fxq "Least sentiment rate video, ID: idZ, dated: 2021-06-15" && pass "Sentiment row" || fail "Sentiment row"
+fi
+
+# ---------- Mean rounding ----------
+cat > tests/tmp_analyse/mean_round.csv <<EOF
+$HEADER
+a,2020-01-01,1,1,1,False
+b,2020-01-02,2,1,1,False
+c,2020-01-03,3,1,1,False
+EOF
+out=$(run_expect_success tests/tmp_analyse/mean_round.csv) || true
+if [[ -n "$out" ]]; then
+    echo "$out" | grep -Fxq "Mean number of views: 2.00" && pass "Mean rounding (4/3→2.00)" || fail "Mean rounding" "$(echo "$out" | grep Mean)"
+fi
+
+# ---------- Tie: max frequency ----------
+cat > tests/tmp_analyse/tie_freq.csv <<EOF
+$HEADER
+idA,2020-01-01,100,1,1,False
+idB,2020-01-02,100,1,1,False
+idA,2020-01-03,100,1,1,False
+idB,2020-01-04,100,1,1,False
+EOF
+out=$(run_expect_success tests/tmp_analyse/tie_freq.csv) || true
+if [[ -n "$out" ]]; then
+    ids_line=$(echo "$out" | sed -n 's/^Most frequent video, ID: //p' | head -1)
+    sorted_got=$(echo "$ids_line" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep . | sort | paste -sd, -)
+    sorted_want="idA,idB"
+    [[ "$sorted_got" == "$sorted_want" ]] && pass "Tie — most frequent lists idA and idB" \
+        || fail "Tie — most frequent" "got '$sorted_got' want '$sorted_want'"
+fi
+
+# ---------- Tie: max dislikes ----------
+cat > tests/tmp_analyse/tie_dislikes.csv <<EOF
+$HEADER
+id1,2020-01-01,100,10,50,False
+id2,2020-01-02,200,10,50,False
+id3,2020-01-03,300,10,40,False
+EOF
+out=$(run_expect_success tests/tmp_analyse/tie_dislikes.csv) || true
+if [[ -n "$out" ]]; then
+    ids=$(echo "$out" | sed -n 's/^Max dislikes video, ID: //p' | head -1)
+    sorted_got=$(echo "$ids" | tr ',' '\n' | sed 's/^ //;s/ $//' | sort | paste -sd, -)
+    sorted_want=$(printf '%s\n' id1 id2 | sort | paste -sd, -)
+    [[ "$sorted_got" == "$sorted_want" ]] && pass "Tie — max dislikes id1,id2" || fail "Tie — max dislikes" "$ids"
+fi
+
+# ---------- Tie: engagement & sentiment (same rates, different rows) ----------
+cat > tests/tmp_analyse/tie_eng_sent.csv <<EOF
+$HEADER
+idX,2020-01-01,100,10,10,False
+idY,2020-02-02,100,10,10,False
+EOF
+out=$(run_expect_success tests/tmp_analyse/tie_eng_sent.csv) || true
+if [[ -n "$out" ]]; then
+    hl=$(echo "$out" | grep '^Highest engagement rate video, ID:' || true)
+    echo "$hl" | grep -q 'idX' && echo "$hl" | grep -q 'idY' \
+        && echo "$hl" | grep -q '2020-01-01' && echo "$hl" | grep -q '2020-02-02' \
+        && pass "Tie — engagement lists both ids and both dates" \
+        || fail "Tie — engagement" "$hl"
+    sl=$(echo "$out" | grep '^Least sentiment rate video, ID:' || true)
+    echo "$sl" | grep -q 'idX' && echo "$sl" | grep -q 'idY' \
+        && pass "Tie — sentiment lists both ids" \
+        || fail "Tie — sentiment" "$sl"
+fi
+
+# ---------- Different winners per metric ----------
+cat > tests/tmp_analyse/multi_metric.csv <<EOF
+$HEADER
+va,2020-01-01,1000,1,1,False
+vb,2020-01-02,100,50,40,False
+vc,2020-01-03,100,10,10,False
+vd,2020-01-04,1000,5,90,False
+va,2020-01-05,500,1,1,False
+EOF
+out=$(run_expect_success tests/tmp_analyse/multi_metric.csv) || true
+if [[ -n "$out" ]]; then
+    echo "$out" | grep -q '^Most frequent video, ID: va' && pass "Dominant frequency va" || fail "Dominant frequency"
+    echo "$out" | grep -q '^Max dislikes video, ID: vd' && pass "Max dislikes vd" || fail "Max dislikes"
+    # Engagement vb: (50+40)/100 = 0.9 beats others
+    echo "$out" | grep -q '^Highest engagement rate video, ID: vb,' && pass "Engagement vb" || fail "Engagement vb"
+    # Sentiment vd: (5-90)/100 = -0.85 lowest
+    echo "$out" | grep -q '^Least sentiment rate video, ID: vd,' && pass "Sentiment vd" || fail "Sentiment vd"
+fi
+
+# ---------- Stress / large synthetic CSV (no repo blob needed) ----------
+stress_csv=tests/tmp_analyse/stress_large.csv
+{
+    echo "$HEADER"
+    # shellcheck disable=SC2034
+    for i in $(seq 1 30000); do
+        lv=$((i % 97))
+        dv=$((i % 83))
+        echo "idr$i,2020-01-01,100,$lv,$dv,False"
+    done
+} > "$stress_csv"
+
+echo -n "Stress test (30k rows)... "
+start=$(date +%s)
+out=$(run_expect_success "$stress_csv") || true
+end=$(date +%s)
+elapsed=$((end - start))
+if [[ -n "$out" ]]; then
+    assert_exact_line_count "Stress output has 5 lines" "$out" 5
+    assert_mean_decimal "$out"
+    echo "${elapsed}s"
+    [[ "$elapsed" -lt 120 ]] && pass "Stress completes within 120s ($elapsed)" || fail "Stress slow" "${elapsed}s"
+else
+    fail "Stress run produced no output"
+fi
+
+# ---------- Full LMS-style file when present locally ----------
+if [[ -f trending_videos_clean.csv ]]; then
+    echo -n "Full trending_videos_clean.csv... "
+    start=$(date +%s)
+    out=$(run_expect_success trending_videos_clean.csv) || true
+    end=$(date +%s)
+    elapsed=$((end - start))
+    if [[ -n "$out" ]]; then
+        assert_exact_line_count "Full file output lines" "$out" 5
+        assert_mean_decimal "$out"
+        echo "${elapsed}s"
+        [[ "$elapsed" -lt 180 ]] && pass "Full file within 180s ($elapsed)" || fail "Full file slow" "${elapsed}s"
+    fi
+else
+    echo "SKIP: trending_videos_clean.csv not in workspace (ignored by git — run locally)"
+fi
+
+echo ""
+echo "Tests passed: $passed"
+echo "Tests failed: $failed"
+
+if [[ "$failed" -gt 0 ]]; then
+    exit 1
+fi
+
+echo "All analyse tests passed successfully."

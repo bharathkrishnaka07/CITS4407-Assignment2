@@ -63,6 +63,72 @@ becomes:
 ./clean trending_videos_unclean.csv
 ```
 
+## Question 2: Data Analysis
+
+The `analyse` script reads a cleaned CSV file provided as a command-line argument and performs multiple data analysis operations on the dataset.
+
+The default input file for this project is `trending_videos_clean.csv`, located in the same directory as the script.
+
+### Input Data
+
+The input CSV file contains the following fields in a fixed order:
+
+- `video_id`
+- `publish_date`
+- `views`
+- `likes`
+- `dislikes`
+- `comments_disabled`
+
+### Error Checks
+
+The script handles the following error cases:
+
+| Error Case | Output |
+|---|---|
+| Incorrect number of command-line arguments | `ERROR: ./analyse expects exactly one argument` |
+| Input file is not a CSV file | `ERROR: Input file expected in a CSV format` |
+| Input file does not exist, is not readable or is empty | `ERROR: The specified input file <file_name> does not exist, is not readable or is empty` |
+
+### Data Analysis Operations
+
+The script performs the following analysis operations:
+
+- Calculates and prints the `video_id` of the video with the highest number of occurrences
+- Calculates and prints the mean number of views rounded to 2 decimal places
+- Calculates and prints the `video_id` of the video with the maximum number of dislikes
+- Calculates and prints the `video_id` and `publish_date` of the video with the highest engagement rate
+- Calculates and prints the `video_id` and `publish_date` of the video with the least net sentiment rate
+- Displays all tied results clearly and sensibly where applicable
+
+### Engagement Rate Formula
+
+```text
+(likes + dislikes) / views
+```
+
+### Net Sentiment Rate Formula
+
+```text
+(likes - dislikes) / views
+```
+
+### Sample Output
+
+```text
+Most frequent video, ID: id4667
+Mean number of views: 2355595.97
+Max dislikes video, ID: id2798
+Highest engagement rate video, ID: id2282, dated: 2018-01-04
+Least sentiment rate video, ID: id2219, dated: 2017-12-13
+```
+
+### How to run this script:
+
+```bash
+./analyse trending_videos_clean.csv
+```
+
 ## Submission Contents
 
 The ZIP submission includes:
