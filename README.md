@@ -4,7 +4,7 @@
 **Author:** BHARATH KRISHNA  
 **Student ID:** 25182359  
 
-## Question 1: Error Checks and Data Cleaning
+## Error Checks and Data Cleaning
 
 The `clean` script reads an input CSV file provided as a command-line argument and generates a cleaned output file named `trending_videos_clean.csv`.
 
@@ -26,13 +26,16 @@ The input CSV file contains the following fields in a fixed order:
 
 The script handles the following error cases:
 
-| Error Case | Output |
-|---|---|
-| No input file specified | `ERROR: No input CSV file provided` |
-| Input file not found in the current directory | `ERROR: Input file not found in the current directory` |
-| Input file is not a CSV file | `ERROR: Input file expected in a CSV format` |
-| Input file is empty | `ERROR: Empty file provided` |
-| Incorrect number of fields in the header | `ERROR: Expected 7 columns in the header` |
+
+| Error Case                                           | Output                                                 |
+| ---------------------------------------------------- | ------------------------------------------------------ |
+| No input file specified or more than one argument   | `ERROR: No input CSV file provided`                    |
+| Input file not found in the current directory        | `ERROR: Input file not found in the current directory`   |
+| Input file is not a CSV file                         | `ERROR: Input file expected in a CSV format`           |
+| Input file is empty                                  | `ERROR: Empty file provided`                           |
+| Incorrect number of fields in the header            | `ERROR: Expected 7 columns in the header`              |
+| File has no data rows (header only)                  | `ERROR: No data rows found in the input file`          |
+
 
 ### Data Cleaning Operations
 
@@ -63,7 +66,7 @@ becomes:
 ./clean trending_videos_unclean.csv
 ```
 
-## Question 2: Data Analysis
+## Data Analysis
 
 The `analyse` script reads a cleaned CSV file provided as a command-line argument and performs multiple data analysis operations on the dataset.
 
@@ -84,11 +87,16 @@ The input CSV file contains the following fields in a fixed order:
 
 The script handles the following error cases:
 
-| Error Case | Output |
-|---|---|
-| Incorrect number of command-line arguments | `ERROR: ./analyse expects exactly one argument` |
-| Input file is not a CSV file | `ERROR: Input file expected in a CSV format` |
-| Input file does not exist, is not readable or is empty | `ERROR: The specified input file <file_name> does not exist, is not readable or is empty` |
+
+| Error Case                                           | Output                                                   |
+| ---------------------------------------------------- | -------------------------------------------------------- |
+| No input file specified, or more than one argument   | `ERROR: No input CSV file provided`                     |
+| Input file not found in the current directory        | `ERROR: Input file not found in the current directory`   |
+| Input file is not a CSV file                         | `ERROR: Input file expected in a CSV format`             |
+| Input file is empty                                  | `ERROR: Empty file provided`                            |
+| Incorrect number of fields in the header             | `ERROR: Expected 6 columns in the header`               |
+| File has no data rows (header only)                  | `ERROR: No data rows found in the input file`           |
+
 
 ### Data Analysis Operations
 
@@ -128,6 +136,16 @@ Least sentiment rate video, ID: id2219, dated: 2017-12-13
 ```bash
 ./analyse trending_videos_clean.csv
 ```
+
+## Workflow Automation and Testing
+
+Added automated test scripts and GitHub Actions workflow files:
+
+- `tests/test_clean`
+- `tests/test_analyse`
+- `.github/workflows/`
+
+The automated tests validate error handling, CSV/header validation, edge cases, tie cases, output formatting, and performance testing for both scripts.
 
 ## Submission Contents
 
