@@ -62,9 +62,9 @@ BEGIN {
     max_frequency = 0
     total_views = 0
     total_rows = 0
-    max_dislikes = 0
-    max_engagement = 0
-    min_sentiment = 1
+    max_dislikes_set = 0
+    max_engagement_set = 0
+    min_sentiment_set = 0
 }
 
 NR > 1 {
@@ -89,9 +89,10 @@ NR > 1 {
     total_rows++
 
     # 3. Find the video with the maximum number of dislikes
-    if ($5 > max_dislikes)
+    if (!max_dislikes_set || $5 > max_dislikes)
     {
         max_dislikes = $5
+        max_dislikes_set = 1
         delete max_dislikes_videos
         max_dislikes_videos[$1] = 1
     }
@@ -100,9 +101,10 @@ NR > 1 {
 
     # 4. Calculate the highest engagement rate
     engagement_rate = ($4 + $5) / $3
-    if (engagement_rate > max_engagement)
+    if (!max_engagement_set || engagement_rate > max_engagement)
     {
         max_engagement = engagement_rate
+        max_engagement_set = 1
         delete highest_engagement_videos
         highest_engagement_videos[$1 "," $2] = 1
     }
@@ -111,9 +113,10 @@ NR > 1 {
 
     # 5. Calculate the least net sentiment rate
     sentiment_rate = ($4 - $5) / $3
-    if (sentiment_rate < min_sentiment)
+    if (!min_sentiment_set || sentiment_rate < min_sentiment)
     {
         min_sentiment = sentiment_rate
+        min_sentiment_set = 1
         delete least_sentiment_videos
         least_sentiment_videos[$1 "," $2] = 1
     }
