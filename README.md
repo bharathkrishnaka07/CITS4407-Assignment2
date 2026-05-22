@@ -26,7 +26,6 @@ The input CSV file contains the following fields in a fixed order:
 
 The script handles the following error cases:
 
-
 | Error Case                                           | Output                                                 |
 | ---------------------------------------------------- | ------------------------------------------------------ |
 | No input file specified or more than one argument   | `ERROR: No input CSV file provided`                    |
@@ -44,7 +43,6 @@ The script performs the following cleaning operations:
 - Removes the `ratings_disabled` column
 - Removes rows with inconsistent field counts (including rows with empty fields)
 - Removes duplicate rows
-- Removes rows with missing `video_id`
 - Removes rows where `likes` or `dislikes` are zero
 - Removes the time component from `publish_date`
 
@@ -70,7 +68,7 @@ becomes:
 
 The `analyse` script reads a cleaned CSV file provided as a command-line argument and performs multiple data analysis operations on the dataset.
 
-The default input file for this project is `trending_videos_clean.csv`, located in the same directory as the script.
+The input file for this script is `trending_videos_clean.csv`, provided as a command-line argument.
 
 ### Input Data
 
@@ -86,7 +84,6 @@ The input CSV file contains the following fields in a fixed order:
 ### Error Checks
 
 The script handles the following error cases:
-
 
 | Error Case                                           | Output                                                   |
 | ---------------------------------------------------- | -------------------------------------------------------- |
@@ -146,6 +143,15 @@ Added automated test scripts and GitHub Actions workflow files:
 - `.github/workflows/`
 
 The automated tests validate error handling, CSV/header validation, edge cases, tie cases, output formatting and performance testing for both scripts.
+
+## File Permissions
+
+Before running the scripts, make sure execute permissions are enabled:
+
+```bash
+chmod +x clean analyse
+chmod +x tests/test_clean tests/test_analyse
+```
 
 ## Submission Contents
 
